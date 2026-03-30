@@ -755,9 +755,14 @@ textarea.field-input { resize: none; min-height: 60px; line-height: 1.5; }
     <div class="field"><div class="field-label">Report Date</div><input class="field-input" id="reportDate" type="date"></div>
   </div>
 
-  <div style="padding: 8px 0 16px;">
+  <div style="padding: 8px 0 4px;">
     <button class="nav-btn success" style="width:100%;padding:18px;font-size:16px;border-radius:14px" onclick="generatePDF()">
       📄 Generate PDF Report
+    </button>
+  </div>
+  <div style="padding: 4px 0 16px;">
+    <button onclick="clearAll()" style="width:100%;padding:14px;border-radius:14px;border:1px solid #e63329;background:transparent;color:#e63329;font-size:15px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;">
+      🗑 Clear All Fields & Start New Inspection
     </button>
   </div>
 </div>
@@ -1099,6 +1104,12 @@ function generatePDF() {
   const date = g('inspDate') || new Date().toISOString().slice(0,10);
   doc.save('Termite_Inspection_' + clientName + '_' + date + '.pdf');
   showToast('PDF saved!');
+}
+
+function clearAll() {
+  if (!confirm('Clear all fields and start a new inspection?')) return;
+  localStorage.removeItem('termite_inspection');
+  location.reload();
 }
 
 function showToast(msg) {
