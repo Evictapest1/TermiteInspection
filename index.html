@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Evict-A-Pest · Termite Inspection</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root {
+  --red: #e63329;
+  --dark: #1a1a1a;
+  --mid: #555;
+  --light: #f4f4f4;
+  --border: #e0e0e0;
+  --card: #fff;
+  --green: #16a34a;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body { font-family: 'DM Sans', sans-serif; background: var(--light); color: var(--dark); min-height: 100vh; }
+
+/* Header */
+.app-header {
+  background: var(--dark); padding: 14px 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 50;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+}
+.app-header-left .brand { font-family: 'Syne', sans-serif; font-size: 16px; color: var(--red); font-weight: 800; letter-spacing: 0.05em; }
+.app-header-left .sub { font-size: 11px; color: rgba(255,255,255,0.4); letter-spacing: 0.05em; }
+.save-indicator { font-size: 11px; color: #4ade80; display: flex; align-items: center; gap: 4px; }
+
+/* Progress */
+.progress-bar {
+  background: #e2e8f0; height: 4px;
+}
+.progress-fill {
+  height: 4px; background: var(--red);
+  transition: width 0.3s ease;
+}
+.page-tabs {
+  display: flex; overflow-x: auto; background: var(--dark);
+  border-top: 1px solid rgba(255,255,255,0.08);
+  scrollbar-width: none;
+}
+.page-tabs::-webkit-scrollbar { display: none; }
+.page-tab {
+  flex-shrink: 0; padding: 8px 14px; font-size: 12px; font-weight: 600;
+  color: rgba(255,255,255,0.4); cursor: pointer; border-bottom: 2px solid transparent;
+  white-space: nowrap; font-family: 'DM Sans', sans-serif;
+  transition: all 0.2s;
+}
+.page-tab.active { color: var(--red); border-bottom-color: var(--red); }
+
+/* Content */
+.page-content { display: none; padding: 16px; padding-bottom: 100px; }
+.page-content.active { display: block; }
+
+/* Section */
+.section { background: var(--card); border-radius: 14px; padding: 16px; margin-bottom: 14px; border: 1px solid var(--border); }
+.section-title { font-family: 'Syne', sans-serif; font-size: 14px; color: var(--red); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+
+/* Fields */
+.field { margin-bottom: 14px; }
+.field:last-child { margin-bottom: 0; }
+.field-label { font-size: 11px; color: var(--mid); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 5px; font-weight: 600; }
+.field-input {
+  width: 100%; padding: 10px 12px; border-radius: 10px;
+  border: 1px solid var(--border); background: #fafafa;
+  font-size: 14px; font-family: 'DM Sans', sans-serif; color: var(--dark);
+  outline: none; transition: border 0.2s;
+}
+.field-input:focus { border-color: var(--red); background: #fff; }
+textarea.field-input { resize: none; min-height: 60px; line-height: 1.5; }
+
+/* Two columns */
+.row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+
+/* Checkboxes / Radio groups */
+.check-group { display: flex; flex-wrap: wrap; gap: 8px; }
+.check-item {
+  display: flex; align-items: center; gap: 6px;
+  background: #f8f8f8; border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 12px; cursor: pointer;
+  font-size: 13px; transition: all 0.15s; user-select: none;
+  flex: 0 0 auto;
+}
+.check-item.checked { background: #fde8e8; border-color: var(--red); color: var(--red); font-weight: 600; }
+.check-item input { display: none; }
+.check-box {
+  width: 16px; height: 16px; border-radius: 3px; border: 2px solid #ccc;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; font-size: 11px; transition: all 0.15s;
+}
+.check-item.checked .check-box { background: var(--red); border-color: var(--red); color: #fff; }
+
+/* Radio groups */
+.radio-group { display: flex; flex-wrap: wrap; gap: 8px; }
+.radio-item {
+  display: flex; align-items: center; gap: 6px;
+  background: #f8f8f8; border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 12px; cursor: pointer;
+  font-size: 13px; transition: all 0.15s; user-select: none;
+}
+.radio-item.selected { background: #fde8e8; border-color: var(--red); color: var(--red); font-weight: 600; }
+.radio-dot {
+  width: 16px; height: 16px; border-radius: 50%; border: 2px solid #ccc;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.radio-item.selected .radio-dot { border-color: var(--red); }
+.radio-item.selected .radio-dot::after { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--red); display: block; }
+
+/* Conditional field */
+.conditional { margin-top: 10px; display: none; }
+.conditional.show { display: block; }
+
+/* Bottom nav */
+.bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: var(--dark); padding: 12px 16px;
+  display: flex; gap: 10px; z-index: 50;
+  box-shadow: 0 -2px 20px rgba(0,0,0,0.3);
+}
+.nav-btn {
+  flex: 1; padding: 14px; border-radius: 12px; border: none;
+  font-size: 15px; font-weight: 700; font-family: 'DM Sans', sans-serif;
+  cursor: pointer; transition: all 0.15s;
+}
+.nav-btn.secondary { background: rgba(255,255,255,0.1); color: #fff; }
+.nav-btn.primary { background: var(--red); color: #fff; }
+.nav-btn.success { background: var(--green); color: #fff; }
+.nav-btn:active { transform: scale(0.97); }
+
+/* Toast */
+.toast {
+  position: fixed; top: 80px; left: 50%; transform: translateX(-50%);
+  background: var(--dark); color: #fff; padding: 10px 20px; border-radius: 20px;
+  font-size: 13px; font-weight: 600; z-index: 200; opacity: 0;
+  transition: opacity 0.3s; pointer-events: none; white-space: nowrap;
+}
+.toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="app-header">
+  <div class="app-header-left">
+    <div class="brand">EVICT-A-PEST</div>
+    <div class="sub">TERMITE INSPECTION · AS 3660.2:2017</div>
+  </div>
+  <div class="save-indicator" id="saveIndicator">✓ Saved</div>
+</div>
+<div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:16.6%"></div></div>
+<div class="page-tabs">
+  <div class="page-tab active" onclick="goToPage(0)">1. Client</div>
+  <div class="page-tab" onclick="goToPage(1)">2. Areas</div>
+  <div class="page-tab" onclick="goToPage(2)">3. Termites</div>
+  <div class="page-tab" onclick="goToPage(3)">4. Treatment</div>
+  <div class="page-tab" onclick="goToPage(4)">5. Environment</div>
+  <div class="page-tab" onclick="goToPage(5)">6. Final</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- PAGE 1: Client & Building -->
+<div class="page-content active" id="page-0">
+  <div class="section">
+    <div class="section-title">Client Information</div>
+    <div class="field"><div class="field-label">Client Name</div><input class="field-input" id="clientName" placeholder="e.g. Stella Barrow"></div>
+    <div class="field"><div class="field-label">Client Address</div><input class="field-input" id="clientAddress" placeholder="Street address"></div>
+    <div class="row-2">
+      <div class="field"><div class="field-label">State</div><input class="field-input" id="clientState" placeholder="NSW"></div>
+      <div class="field"><div class="field-label">Postcode</div><input class="field-input" id="clientPostcode" placeholder="2000"></div>
+    </div>
+    <div class="field"><div class="field-label">Re: Structure at (if different)</div><input class="field-input" id="structureAt" placeholder="Leave blank if same"></div>
+    <div class="field"><div class="field-label">Phone</div><input class="field-input" id="clientPhone" placeholder=""></div>
+    <div class="field"><div class="field-label">Mobile</div><input class="field-input" id="clientMobile" placeholder=""></div>
+    <div class="field"><div class="field-label">Email</div><input class="field-input" id="clientEmail" placeholder=""></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Inspection Details</div>
+    <div class="row-3">
+      <div class="field"><div class="field-label">Date</div><input class="field-input" id="inspDate" type="date"></div>
+      <div class="field"><div class="field-label">Start Time</div><input class="field-input" id="startTime" type="time"></div>
+      <div class="field"><div class="field-label">Finish Time</div><input class="field-input" id="finishTime" type="time"></div>
+    </div>
+    <div class="field">
+      <div class="field-label">Weather Conditions</div>
+      <div class="radio-group" id="weather">
+        <div class="radio-item" onclick="selectRadio('weather',this,'Dry')"><div class="radio-dot"></div>Dry</div>
+        <div class="radio-item" onclick="selectRadio('weather',this,'Wet')"><div class="radio-dot"></div>Wet</div>
+        <div class="radio-item" onclick="selectRadio('weather',this,'Intermittent Rain')"><div class="radio-dot"></div>Intermittent Rain</div>
+        <div class="radio-item" onclick="selectRadio('weather',this,'Extended Dry Period')"><div class="radio-dot"></div>Extended Dry Period</div>
+        <div class="radio-item" onclick="selectRadio('weather',this,'Extended Wet Period')"><div class="radio-dot"></div>Extended Wet Period</div>
+        <div class="radio-item" onclick="selectRadio('weather',this,'Refer to Comments')"><div class="radio-dot"></div>Refer to Comments</div>
+      </div>
+    </div>
+    <div class="field"><div class="field-label">Weather Comments</div><textarea class="field-input" id="weatherComments" placeholder="Additional comments..."></textarea></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">1.0 Building Description</div>
+    <div class="field">
+      <div class="field-label">Type</div>
+      <div class="check-group" id="buildingType">
+        <div class="check-item" onclick="toggleCheck(this,'buildingType','Domestic')"><div class="check-box"></div>Domestic</div>
+        <div class="check-item" onclick="toggleCheck(this,'buildingType','Commercial')"><div class="check-box"></div>Commercial</div>
+        <div class="check-item" onclick="toggleCheck(this,'buildingType','Apartment')"><div class="check-box"></div>Apartment</div>
+        <div class="check-item" onclick="toggleCheck(this,'buildingType','Duplex')"><div class="check-box"></div>Duplex</div>
+        <div class="check-item" onclick="toggleCheck(this,'buildingType','Unit')"><div class="check-box"></div>Unit</div>
+        <div class="check-item" onclick="toggleCheck(this,'buildingType','Flat')"><div class="check-box"></div>Flat</div>
+        <div class="check-item" onclick="toggleCheck(this,'buildingType','Townhouse')"><div class="check-box"></div>Townhouse</div>
+      </div>
+      <input class="field-input" id="buildingTypeOther" placeholder="Other type..." style="margin-top:8px">
+    </div>
+    <div class="field">
+      <div class="field-label">Height</div>
+      <div class="radio-group" id="buildingHeight">
+        <div class="radio-item" onclick="selectRadio('buildingHeight',this,'Single Storey')"><div class="radio-dot"></div>Single Storey</div>
+        <div class="radio-item" onclick="selectRadio('buildingHeight',this,'Multistorey')"><div class="radio-dot"></div>Multistorey</div>
+        <div class="radio-item" onclick="selectRadio('buildingHeight',this,'Split Level')"><div class="radio-dot"></div>Split Level</div>
+      </div>
+      <input class="field-input" id="buildingHeightOther" placeholder="Other height / notes..." style="margin-top:8px">
+    </div>
+    <div class="field">
+      <div class="field-label">Built From</div>
+      <div class="check-group" id="builtFrom">
+        <div class="check-item" onclick="toggleCheck(this,'builtFrom','Cavity Brick')"><div class="check-box"></div>Cavity Brick</div>
+        <div class="check-item" onclick="toggleCheck(this,'builtFrom','Brick Veneer')"><div class="check-box"></div>Brick Veneer</div>
+        <div class="check-item" onclick="toggleCheck(this,'builtFrom','Weatherboard')"><div class="check-box"></div>Weatherboard</div>
+        <div class="check-item" onclick="toggleCheck(this,'builtFrom','Hardiplank')"><div class="check-box"></div>Hardiplank</div>
+        <div class="check-item" onclick="toggleCheck(this,'builtFrom','Colour Bond')"><div class="check-box"></div>Colour Bond</div>
+        <div class="check-item" onclick="toggleCheck(this,'builtFrom','Concrete Block')"><div class="check-box"></div>Concrete Block</div>
+        <div class="check-item" onclick="toggleCheck(this,'builtFrom','Stone')"><div class="check-box"></div>Stone</div>
+        <div class="check-item" onclick="toggleCheck(this,'builtFrom','Aluminium')"><div class="check-box"></div>Aluminium</div>
+        <div class="check-item" onclick="toggleCheck(this,'builtFrom','Stucco')"><div class="check-box"></div>Stucco</div>
+        <div class="check-item" onclick="toggleCheck(this,'builtFrom','Plastic/Vinyl')"><div class="check-box"></div>Plastic/Vinyl</div>
+        <div class="check-item" onclick="toggleCheck(this,'builtFrom','Coated Metal Sheeting')"><div class="check-box"></div>Coated Metal Sheeting</div>
+      </div>
+      <input class="field-input" id="builtFromOther" placeholder="Other material / notes..." style="margin-top:8px">
+    </div>
+    <div class="field">
+      <div class="field-label">Pier Type</div>
+      <div class="check-group" id="pierType">
+        <div class="check-item" onclick="toggleCheck(this,'pierType','Brick')"><div class="check-box"></div>Brick</div>
+        <div class="check-item" onclick="toggleCheck(this,'pierType','Concrete')"><div class="check-box"></div>Concrete</div>
+        <div class="check-item" onclick="toggleCheck(this,'pierType','Timber')"><div class="check-box"></div>Timber</div>
+        <div class="check-item" onclick="toggleCheck(this,'pierType','Stone')"><div class="check-box"></div>Stone</div>
+        <div class="check-item" onclick="toggleCheck(this,'pierType','Steel')"><div class="check-box"></div>Steel</div>
+        <div class="check-item" onclick="toggleCheck(this,'pierType','N/A')"><div class="check-box"></div>N/A</div>
+      </div>
+      <input class="field-input" id="pierTypeOther" placeholder="Other..." style="margin-top:8px">
+    </div>
+    <div class="field">
+      <div class="field-label">Flooring</div>
+      <div class="check-group" id="flooring">
+        <div class="check-item" onclick="toggleCheck(this,'flooring','Concrete Slab')"><div class="check-box"></div>Concrete Slab</div>
+        <div class="check-item" onclick="toggleCheck(this,'flooring','Timber')"><div class="check-box"></div>Timber</div>
+        <div class="check-item" onclick="toggleCheck(this,'flooring','Timber with concrete areas')"><div class="check-box"></div>Timber with concrete areas</div>
+        <div class="check-item" onclick="toggleCheck(this,'flooring','Timber with hard board areas')"><div class="check-box"></div>Timber with hard board areas</div>
+        <div class="check-item" onclick="toggleCheck(this,'flooring','Timber, hardboard and concrete')"><div class="check-box"></div>Timber, hardboard and concrete</div>
+        <div class="check-item" onclick="toggleCheck(this,'flooring','Chipboard')"><div class="check-box"></div>Chipboard</div>
+      </div>
+      <input class="field-input" id="flooringOther" placeholder="Other..." style="margin-top:8px">
+    </div>
+    <div class="field">
+      <div class="field-label">Roofing</div>
+      <div class="check-group" id="roofing">
+        <div class="check-item" onclick="toggleCheck(this,'roofing','Tile')"><div class="check-box"></div>Tile</div>
+        <div class="check-item" onclick="toggleCheck(this,'roofing','Coated Metal')"><div class="check-box"></div>Coated Metal</div>
+        <div class="check-item" onclick="toggleCheck(this,'roofing','Iron')"><div class="check-box"></div>Iron</div>
+        <div class="check-item" onclick="toggleCheck(this,'roofing','Aluminium')"><div class="check-box"></div>Aluminium</div>
+      </div>
+      <input class="field-input" id="roofingOther" placeholder="Other..." style="margin-top:8px">
+    </div>
+    <div class="field">
+      <div class="field-label">Fences</div>
+      <div class="check-group" id="fences">
+        <div class="check-item" onclick="toggleCheck(this,'fences','Colour Bond Type')"><div class="check-box"></div>Colour Bond</div>
+        <div class="check-item" onclick="toggleCheck(this,'fences','Timber')"><div class="check-box"></div>Timber</div>
+        <div class="check-item" onclick="toggleCheck(this,'fences','Brick')"><div class="check-box"></div>Brick</div>
+      </div>
+      <input class="field-input" id="fencesOther" placeholder="Other..." style="margin-top:8px">
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 2: Areas Inspected -->
+<div class="page-content" id="page-1">
+  <div class="section">
+    <div class="section-title">1.1 Areas Inspected</div>
+    <div class="check-group" id="areasInspected">
+      <div class="check-item" onclick="toggleCheck(this,'areasInspected','Interior')"><div class="check-box"></div>Interior</div>
+      <div class="check-item" onclick="toggleCheck(this,'areasInspected','Roof Void')"><div class="check-box"></div>Roof Void</div>
+      <div class="check-item" onclick="toggleCheck(this,'areasInspected','Subfloor')"><div class="check-box"></div>Subfloor</div>
+      <div class="check-item" onclick="toggleCheck(this,'areasInspected','Wall Exterior')"><div class="check-box"></div>Wall Exterior</div>
+      <div class="check-item" onclick="toggleCheck(this,'areasInspected','Garage')"><div class="check-box"></div>Garage</div>
+      <div class="check-item" onclick="toggleCheck(this,'areasInspected','Carport')"><div class="check-box"></div>Carport</div>
+      <div class="check-item" onclick="toggleCheck(this,'areasInspected','Landscaping Timbers')"><div class="check-box"></div>Landscaping Timbers</div>
+      <div class="check-item" onclick="toggleCheck(this,'areasInspected','Stumps')"><div class="check-box"></div>Stumps</div>
+      <div class="check-item" onclick="toggleCheck(this,'areasInspected','Trees')"><div class="check-box"></div>Trees</div>
+      <div class="check-item" onclick="toggleCheck(this,'areasInspected','Posts')"><div class="check-box"></div>Posts</div>
+      <div class="check-item" onclick="toggleCheck(this,'areasInspected','Fences')"><div class="check-box"></div>Fences</div>
+      <div class="check-item" onclick="toggleCheck(this,'areasInspected','Garden')"><div class="check-box"></div>Garden</div>
+      <div class="check-item" onclick="toggleCheck(this,'areasInspected','Timber Retaining Walls')"><div class="check-box"></div>Timber Retaining Walls</div>
+    </div>
+    <input class="field-input" id="areasInspectedOther" placeholder="Out Buildings type / Other..." style="margin-top:8px">
+  </div>
+
+  <div class="section">
+    <div class="section-title">1.2 Areas NOT Inspected (No Reasonable Access)</div>
+    <div class="field"><div class="field-label">Interior because</div><input class="field-input" id="ni_interior" placeholder="Leave blank if N/A"></div>
+    <div class="field"><div class="field-label">Edge of concrete slab because</div><input class="field-input" id="ni_slab"></div>
+    <div class="field"><div class="field-label">Slab Edge covered at inspection by</div><input class="field-input" id="ni_slabCovered"></div>
+    <div class="field"><div class="field-label">Roof Void because</div><input class="field-input" id="ni_roofVoid"></div>
+    <div class="field"><div class="field-label">Subfloor because</div><input class="field-input" id="ni_subfloor"></div>
+    <div class="field"><div class="field-label">Wall Exterior because</div><input class="field-input" id="ni_wallExt"></div>
+    <div class="field"><div class="field-label">Garage because</div><input class="field-input" id="ni_garage"></div>
+    <div class="field"><div class="field-label">Carport because</div><input class="field-input" id="ni_carport"></div>
+    <div class="field"><div class="field-label">Out Buildings because</div><input class="field-input" id="ni_outBuildings"></div>
+    <div class="field"><div class="field-label">Trees, Stumps &/or Posts because</div><input class="field-input" id="ni_trees"></div>
+    <div class="field"><div class="field-label">Fences because</div><input class="field-input" id="ni_fences"></div>
+    <div class="field"><div class="field-label">Garden & Landscaping timbers because</div><input class="field-input" id="ni_garden"></div>
+    <div class="field"><div class="field-label">Timber Retaining walls because</div><input class="field-input" id="ni_retaining"></div>
+    <div class="field"><div class="field-label">Other</div><input class="field-input" id="ni_other"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">1.3 Areas Obstructed or Restricted</div>
+    <div class="field"><div class="field-label">Interior because</div><input class="field-input" id="ob_interior"></div>
+    <div class="field"><div class="field-label">Roof Void because</div><input class="field-input" id="ob_roofVoid"></div>
+    <div class="field"><div class="field-label">Subfloor because</div><input class="field-input" id="ob_subfloor"></div>
+    <div class="field"><div class="field-label">Wall Exterior because</div><input class="field-input" id="ob_wallExt"></div>
+    <div class="field"><div class="field-label">Garage because</div><input class="field-input" id="ob_garage"></div>
+    <div class="field"><div class="field-label">Carport because</div><input class="field-input" id="ob_carport"></div>
+    <div class="field"><div class="field-label">Out Buildings because</div><input class="field-input" id="ob_outBuildings"></div>
+    <div class="field"><div class="field-label">Trees, Stumps &/or Posts because</div><input class="field-input" id="ob_trees"></div>
+    <div class="field"><div class="field-label">Fences because</div><input class="field-input" id="ob_fences"></div>
+    <div class="field"><div class="field-label">Garden & Landscaping because</div><input class="field-input" id="ob_garden"></div>
+    <div class="field"><div class="field-label">Timber Retaining walls because</div><input class="field-input" id="ob_retaining"></div>
+    <div class="field"><div class="field-label">Other because</div><input class="field-input" id="ob_other"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">1.4 High Risk Areas (Access Should Be Gained)</div>
+    <div class="field"><div class="field-label">Interior because</div><input class="field-input" id="hr_interior"></div>
+    <div class="field"><div class="field-label">Edge of concrete slab because</div><input class="field-input" id="hr_slab"></div>
+    <div class="field"><div class="field-label">Weep holes because</div><input class="field-input" id="hr_weepHoles"></div>
+    <div class="field"><div class="field-label">Roof Void because</div><input class="field-input" id="hr_roofVoid"></div>
+    <div class="field"><div class="field-label">Subfloor because</div><input class="field-input" id="hr_subfloor"></div>
+    <div class="field"><div class="field-label">Exterior walls because</div><input class="field-input" id="hr_extWalls"></div>
+    <div class="field"><div class="field-label">Garage because</div><input class="field-input" id="hr_garage"></div>
+    <div class="field"><div class="field-label">Carport because</div><input class="field-input" id="hr_carport"></div>
+    <div class="field"><div class="field-label">Out Buildings</div><input class="field-input" id="hr_outBuildings"></div>
+    <div class="field"><div class="field-label">Fences because</div><input class="field-input" id="hr_fences"></div>
+    <div class="field"><div class="field-label">Retaining walls because</div><input class="field-input" id="hr_retaining"></div>
+    <div class="field"><div class="field-label">Other because</div><input class="field-input" id="hr_other"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">General Questions</div>
+    <div class="field">
+      <div class="field-label">Was insulation present in the roof void?</div>
+      <div class="radio-group" id="insulation">
+        <div class="radio-item" onclick="selectRadio('insulation',this,'Yes')"><div class="radio-dot"></div>Yes</div>
+        <div class="radio-item" onclick="selectRadio('insulation',this,'No')"><div class="radio-dot"></div>No</div>
+        <div class="radio-item" onclick="selectRadio('insulation',this,'Unable to Determine')"><div class="radio-dot"></div>Unable to Determine</div>
+      </div>
+      <input class="field-input" id="insulationDetails" placeholder="Unable to determine due to..." style="margin-top:8px">
+    </div>
+    <div class="field">
+      <div class="field-label">Was the property furnished at time of inspection?</div>
+      <div class="radio-group" id="furnished">
+        <div class="radio-item" onclick="selectRadio('furnished',this,'Yes')"><div class="radio-dot"></div>Yes</div>
+        <div class="radio-item" onclick="selectRadio('furnished',this,'No')"><div class="radio-dot"></div>No</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 3: Termite Findings -->
+<div class="page-content" id="page-2">
+  <div class="section">
+    <div class="section-title">2.1 Active Termites (Live Insects) Found?</div>
+    <div class="radio-group" id="activeTermites">
+      <div class="radio-item" onclick="selectRadio('activeTermites',this,'YES'); toggleConditional('activeTermitesDetails', true)"><div class="radio-dot"></div>YES</div>
+      <div class="radio-item" onclick="selectRadio('activeTermites',this,'NO'); toggleConditional('activeTermitesDetails', false)"><div class="radio-dot"></div>NO</div>
+    </div>
+    <div class="conditional" id="activeTermitesDetails">
+      <div class="field-label" style="margin-top:10px">Active termites located in:</div>
+      <div class="check-group" id="activeLocations">
+        <div class="check-item" onclick="toggleCheck(this,'activeLocations','Interior')"><div class="check-box"></div>Interior</div>
+        <div class="check-item" onclick="toggleCheck(this,'activeLocations','Roof Void')"><div class="check-box"></div>Roof Void</div>
+        <div class="check-item" onclick="toggleCheck(this,'activeLocations','Visible concrete slab edge')"><div class="check-box"></div>Visible concrete slab edge</div>
+        <div class="check-item" onclick="toggleCheck(this,'activeLocations','Subfloor')"><div class="check-box"></div>Subfloor</div>
+        <div class="check-item" onclick="toggleCheck(this,'activeLocations','Wall Exterior')"><div class="check-box"></div>Wall Exterior</div>
+        <div class="check-item" onclick="toggleCheck(this,'activeLocations','Trees')"><div class="check-box"></div>Trees</div>
+        <div class="check-item" onclick="toggleCheck(this,'activeLocations','Garage')"><div class="check-box"></div>Garage</div>
+        <div class="check-item" onclick="toggleCheck(this,'activeLocations','Carport')"><div class="check-box"></div>Carport</div>
+        <div class="check-item" onclick="toggleCheck(this,'activeLocations','Outbuildings')"><div class="check-box"></div>Outbuildings</div>
+        <div class="check-item" onclick="toggleCheck(this,'activeLocations','Fences')"><div class="check-box"></div>Fences</div>
+        <div class="check-item" onclick="toggleCheck(this,'activeLocations','Garden')"><div class="check-box"></div>Garden</div>
+        <div class="check-item" onclick="toggleCheck(this,'activeLocations','Stumps')"><div class="check-box"></div>Stumps</div>
+        <div class="check-item" onclick="toggleCheck(this,'activeLocations','Posts')"><div class="check-box"></div>Posts</div>
+        <div class="check-item" onclick="toggleCheck(this,'activeLocations','Timber retaining wall')"><div class="check-box"></div>Timber retaining wall</div>
+        <div class="check-item" onclick="toggleCheck(this,'activeLocations','Landscaping timbers')"><div class="check-box"></div>Landscaping timbers</div>
+      </div>
+    </div>
+    <div class="field" style="margin-top:12px">
+      <div class="field-label">The termites are believed to be</div>
+      <div class="radio-group" id="termiteSpecies">
+        <div class="radio-item" onclick="selectRadio('termiteSpecies',this,'N/A as none found')"><div class="radio-dot"></div>N/A as none found</div>
+        <div class="radio-item" onclick="selectRadio('termiteSpecies',this,'Coptotermes spp')"><div class="radio-dot"></div>Coptotermes spp</div>
+        <div class="radio-item" onclick="selectRadio('termiteSpecies',this,'Schedorhinotermes spp')"><div class="radio-dot"></div>Schedorhinotermes spp</div>
+        <div class="radio-item" onclick="selectRadio('termiteSpecies',this,'Mastotermes Spp')"><div class="radio-dot"></div>Mastotermes Spp</div>
+        <div class="radio-item" onclick="selectRadio('termiteSpecies',this,'Nasutitermes spp')"><div class="radio-dot"></div>Nasutitermes spp</div>
+        <div class="radio-item" onclick="selectRadio('termiteSpecies',this,'Porotermes Spp')"><div class="radio-dot"></div>Porotermes Spp</div>
+        <div class="radio-item" onclick="selectRadio('termiteSpecies',this,'Microcerotermes Spp')"><div class="radio-dot"></div>Microcerotermes Spp</div>
+        <div class="radio-item" onclick="selectRadio('termiteSpecies',this,'Heterotermes species')"><div class="radio-dot"></div>Heterotermes species</div>
+      </div>
+      <div class="field">
+        <div class="field-label" style="margin-top:10px">Termites have the potential to cause</div>
+        <div class="radio-group" id="termitePotential">
+          <div class="radio-item" onclick="selectRadio('termitePotential',this,'Extensive & Severe')"><div class="radio-dot"></div>Extensive & Severe</div>
+          <div class="radio-item" onclick="selectRadio('termitePotential',this,'Moderate to extensive')"><div class="radio-dot"></div>Moderate to extensive</div>
+          <div class="radio-item" onclick="selectRadio('termitePotential',this,'Moderate amounts of damage')"><div class="radio-dot"></div>Moderate amounts of damage</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">2.2 Termite Nest Found?</div>
+    <div class="radio-group" id="nestFound">
+      <div class="radio-item" onclick="selectRadio('nestFound',this,'Yes'); toggleConditional('nestDetails',true)"><div class="radio-dot"></div>Yes</div>
+      <div class="radio-item" onclick="selectRadio('nestFound',this,'No'); toggleConditional('nestDetails',false)"><div class="radio-dot"></div>No</div>
+    </div>
+    <div class="conditional" id="nestDetails">
+      <div class="field"><div class="field-label">Description & location of nest</div><textarea class="field-input" id="nestDescription" placeholder="Describe location..."></textarea></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">2.3 – 2.7 Evidence & Damage</div>
+    <div class="field">
+      <div class="field-label">2.3 Visible evidence of subterranean termite workings?</div>
+      <div class="radio-group" id="subWorking">
+        <div class="radio-item" onclick="selectRadio('subWorking',this,'Yes')"><div class="radio-dot"></div>Yes</div>
+        <div class="radio-item" onclick="selectRadio('subWorking',this,'No')"><div class="radio-dot"></div>No</div>
+      </div>
+    </div>
+    <div class="field">
+      <div class="field-label">2.4 Visible evidence of damage located?</div>
+      <div class="radio-group" id="damageFound">
+        <div class="radio-item" onclick="selectRadio('damageFound',this,'Yes')"><div class="radio-dot"></div>Yes</div>
+        <div class="radio-item" onclick="selectRadio('damageFound',this,'No')"><div class="radio-dot"></div>No</div>
+      </div>
+    </div>
+    <div class="field"><div class="field-label">2.5 Damage/workings found mainly in</div><input class="field-input" id="damageLocation" placeholder="Location details..."></div>
+    <div class="field">
+      <div class="field-label">2.6 Termite damage appears to be</div>
+      <div class="radio-group" id="damageLevel">
+        <div class="radio-item" onclick="selectRadio('damageLevel',this,'Extensive and Severe')"><div class="radio-dot"></div>Extensive and Severe</div>
+        <div class="radio-item" onclick="selectRadio('damageLevel',this,'Extensive')"><div class="radio-dot"></div>Extensive</div>
+        <div class="radio-item" onclick="selectRadio('damageLevel',this,'Moderate to extensive')"><div class="radio-dot"></div>Moderate to extensive</div>
+        <div class="radio-item" onclick="selectRadio('damageLevel',this,'Moderate')"><div class="radio-dot"></div>Moderate</div>
+        <div class="radio-item" onclick="selectRadio('damageLevel',this,'No visual damage found')"><div class="radio-dot"></div>No visual damage found</div>
+      </div>
+    </div>
+    <div class="field">
+      <div class="field-label">2.7 Moisture Meter Readings</div>
+      <div class="radio-group" id="moistureReading">
+        <div class="radio-item" onclick="selectRadio('moistureReading',this,'Normal readings')"><div class="radio-dot"></div>Normal readings</div>
+        <div class="radio-item" onclick="selectRadio('moistureReading',this,'High Moisture')"><div class="radio-dot"></div>High Moisture</div>
+      </div>
+      <input class="field-input" id="moistureDetails" placeholder="Details/Location..." style="margin-top:8px">
+    </div>
+    <div class="field">
+      <div class="field-label">Brand/Model of Moisture Meter</div>
+      <div class="radio-group" id="moistureMeter">
+        <div class="radio-item" onclick="selectRadio('moistureMeter',this,'Tramex Encounter')"><div class="radio-dot"></div>Tramex Encounter</div>
+        <div class="radio-item" onclick="selectRadio('moistureMeter',this,'Tramex Encounter Plus')"><div class="radio-dot"></div>Tramex Encounter Plus</div>
+        <div class="radio-item" onclick="selectRadio('moistureMeter',this,'Termatrac Dual Mode Meter')"><div class="radio-dot"></div>Termatrac Dual Mode</div>
+      </div>
+      <input class="field-input" id="moistureMeterOther" placeholder="Other model..." style="margin-top:8px">
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 4: Treatment -->
+<div class="page-content" id="page-3">
+  <div class="section">
+    <div class="section-title">2.8 Evidence of Previous Treatment</div>
+    <div class="check-group" id="prevTreatment">
+      <div class="check-item" onclick="toggleCheck(this,'prevTreatment','No visual evidence')"><div class="check-box"></div>No visual evidence</div>
+      <div class="check-item" onclick="toggleCheck(this,'prevTreatment','Signs of possible treatment')"><div class="check-box"></div>Signs of possible treatment</div>
+      <div class="check-item" onclick="toggleCheck(this,'prevTreatment','Drill holes')"><div class="check-box"></div>Drill holes</div>
+      <div class="check-item" onclick="toggleCheck(this,'prevTreatment','Signs of dusting')"><div class="check-box"></div>Signs of dusting</div>
+      <div class="check-item" onclick="toggleCheck(this,'prevTreatment','Definite Signs of treatment')"><div class="check-box"></div>Definite Signs of treatment</div>
+      <div class="check-item" onclick="toggleCheck(this,'prevTreatment','Aggregation stations (monitoring stations or boxes)')"><div class="check-box"></div>Aggregation stations</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">2.9 Durable Sign</div>
+    <div class="radio-group" id="durableSign">
+      <div class="radio-item" onclick="selectRadio('durableSign',this,'Was located'); toggleConditional('durableSignDetails',true)"><div class="radio-dot"></div>Was Located</div>
+      <div class="radio-item" onclick="selectRadio('durableSign',this,'Was Not located'); toggleConditional('durableSignDetails',false)"><div class="radio-dot"></div>Was Not Located</div>
+    </div>
+    <div class="conditional" id="durableSignDetails">
+      <div class="field"><div class="field-label">Found in</div><input class="field-input" id="durableSignLocation"></div>
+      <div class="field">
+        <div class="field-label">Indicates that</div>
+        <div class="check-group" id="durableSignType">
+          <div class="check-item" onclick="toggleCheck(this,'durableSignType','A chemical treated zone')"><div class="check-box"></div>Chemical treated zone</div>
+          <div class="check-item" onclick="toggleCheck(this,'durableSignType','A physical Treated zone')"><div class="check-box"></div>Physical treated zone</div>
+          <div class="check-item" onclick="toggleCheck(this,'durableSignType','Physical/chemical treated zone')"><div class="check-box"></div>Physical/chemical treated zone</div>
+          <div class="check-item" onclick="toggleCheck(this,'durableSignType','A termite baiting and monitoring system')"><div class="check-box"></div>Termite baiting/monitoring system</div>
+          <div class="check-item" onclick="toggleCheck(this,'durableSignType','Active termites treated')"><div class="check-box"></div>Active termites treated</div>
+          <div class="check-item" onclick="toggleCheck(this,'durableSignType','No termite management system was installed')"><div class="check-box"></div>No management system installed</div>
+          <div class="check-item" onclick="toggleCheck(this,'durableSignType','A Sheet Material System')"><div class="check-box"></div>Sheet Material System</div>
+          <div class="check-item" onclick="toggleCheck(this,'durableSignType','Could not be read as illegible')"><div class="check-box"></div>Could not be read (illegible)</div>
+        </div>
+      </div>
+      <div class="field"><div class="field-label">Life Expectancy of product (years)</div><input class="field-input" id="lifeExpectancy" placeholder="e.g. 10"></div>
+      <div class="field">
+        <div class="field-label">System appears to have been maintained</div>
+        <div class="radio-group" id="systemMaintained">
+          <div class="radio-item" onclick="selectRadio('systemMaintained',this,'Yes')"><div class="radio-dot"></div>Yes</div>
+          <div class="radio-item" onclick="selectRadio('systemMaintained',this,'No')"><div class="radio-dot"></div>No</div>
+          <div class="radio-item" onclick="selectRadio('systemMaintained',this,'Cannot assess')"><div class="radio-dot"></div>Cannot assess</div>
+          <div class="radio-item" onclick="selectRadio('systemMaintained',this,'No system present')"><div class="radio-dot"></div>No system present</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">2.10 Treatment Recommendation</div>
+    <div class="field">
+      <div class="field-label">Recommendation</div>
+      <div class="radio-group" id="treatmentRec">
+        <div class="radio-item" onclick="selectRadio('treatmentRec',this,'Essential')"><div class="radio-dot"></div>Essential</div>
+        <div class="radio-item" onclick="selectRadio('treatmentRec',this,'Strongly Recommended')"><div class="radio-dot"></div>Strongly Recommended</div>
+        <div class="radio-item" onclick="selectRadio('treatmentRec',this,'Recommended')"><div class="radio-dot"></div>Recommended</div>
+      </div>
+    </div>
+    <div class="field">
+      <div class="field-label">Reason</div>
+      <div class="check-group" id="treatmentReason">
+        <div class="check-item" onclick="toggleCheck(this,'treatmentReason','A treatment is not installed')"><div class="check-box"></div>No treatment installed</div>
+        <div class="check-item" onclick="toggleCheck(this,'treatmentReason','An installed treatment is not current')"><div class="check-box"></div>Treatment not current</div>
+        <div class="check-item" onclick="toggleCheck(this,'treatmentReason','No assurance for another firm\'s Treatment')"><div class="check-box"></div>No assurance another firm's treatment</div>
+        <div class="check-item" onclick="toggleCheck(this,'treatmentReason','A treatment previously installed us is current')"><div class="check-box"></div>Previous treatment by us is current</div>
+        <div class="check-item" onclick="toggleCheck(this,'treatmentReason','The installed treatment could not be verified')"><div class="check-box"></div>Treatment could not be verified</div>
+        <div class="check-item" onclick="toggleCheck(this,'treatmentReason','A treatment previously installed by us is current')"><div class="check-box"></div>Previous treatment by us current</div>
+        <div class="check-item" onclick="toggleCheck(this,'treatmentReason','A treatment, as agreed, is being installed')"><div class="check-box"></div>Treatment being installed</div>
+      </div>
+    </div>
+    <div class="field"><div class="field-label">Comment</div><textarea class="field-input" id="treatmentComment"></textarea></div>
+    <div class="field">
+      <div class="field-label">Treatment Proposal</div>
+      <div class="check-group" id="treatmentProposal">
+        <div class="check-item" onclick="toggleCheck(this,'treatmentProposal','Is attached')"><div class="check-box"></div>Is attached</div>
+        <div class="check-item" onclick="toggleCheck(this,'treatmentProposal','Is recommended and available upon request')"><div class="check-box"></div>Recommended, available on request</div>
+        <div class="check-item" onclick="toggleCheck(this,'treatmentProposal','Is not attached but recommended')"><div class="check-box"></div>Not attached but recommended</div>
+        <div class="check-item" onclick="toggleCheck(this,'treatmentProposal','Is Not attached')"><div class="check-box"></div>Not attached</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">2.11 – 2.12 Shields & Wood Decay</div>
+    <div class="field">
+      <div class="field-label">2.11 Termite shields appear to be</div>
+      <div class="radio-group" id="termiteShields">
+        <div class="radio-item" onclick="selectRadio('termiteShields',this,'Adequate')"><div class="radio-dot"></div>Adequate</div>
+        <div class="radio-item" onclick="selectRadio('termiteShields',this,'Inadequate')"><div class="radio-dot"></div>Inadequate</div>
+        <div class="radio-item" onclick="selectRadio('termiteShields',this,'Not Applicable')"><div class="radio-dot"></div>Not Applicable</div>
+        <div class="radio-item" onclick="selectRadio('termiteShields',this,'Not Able to Assess')"><div class="radio-dot"></div>Not Able to Assess</div>
+      </div>
+      <input class="field-input" id="termiteShieldsComment" placeholder="Comment..." style="margin-top:8px">
+    </div>
+    <div class="field">
+      <div class="field-label">2.12 Visible wood decay fungi (rot) found?</div>
+      <div class="radio-group" id="woodDecay">
+        <div class="radio-item" onclick="selectRadio('woodDecay',this,'YES'); toggleConditional('woodDecayDetails',true)"><div class="radio-dot"></div>YES</div>
+        <div class="radio-item" onclick="selectRadio('woodDecay',this,'NO'); toggleConditional('woodDecayDetails',false)"><div class="radio-dot"></div>NO</div>
+      </div>
+      <div class="conditional" id="woodDecayDetails">
+        <div class="field"><div class="field-label">Evidence found in</div><textarea class="field-input" id="woodDecayLocation" placeholder="Describe locations..."></textarea></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 5: Environment -->
+<div class="page-content" id="page-4">
+  <div class="section">
+    <div class="section-title">2.13 Conditions Conducive to Termites</div>
+    <div class="check-group" id="conducive">
+      <div class="check-item" onclick="toggleCheck(this,'conducive','Timber that appear susceptible to decay')"><div class="check-box"></div>Timber susceptible to decay</div>
+      <div class="check-item" onclick="toggleCheck(this,'conducive','Timber in the subfloor')"><div class="check-box"></div>Timber in subfloor</div>
+      <div class="check-item" onclick="toggleCheck(this,'conducive','Timber stored against the building')"><div class="check-box"></div>Timber stored against building</div>
+      <div class="check-item" onclick="toggleCheck(this,'conducive','Timber debris externally')"><div class="check-box"></div>Timber debris externally</div>
+      <div class="check-item" onclick="toggleCheck(this,'conducive','Formwork Left in Place')"><div class="check-box"></div>Formwork Left in Place</div>
+      <div class="check-item" onclick="toggleCheck(this,'conducive','Timber retaining walls')"><div class="check-box"></div>Timber retaining walls</div>
+      <div class="check-item" onclick="toggleCheck(this,'conducive','Landscaping Timbers in/on soil')"><div class="check-box"></div>Landscaping Timbers in/on soil</div>
+      <div class="check-item" onclick="toggleCheck(this,'conducive','Heavy foliage against building')"><div class="check-box"></div>Heavy foliage against building</div>
+      <div class="check-item" onclick="toggleCheck(this,'conducive','Timber Structures in ground contact')"><div class="check-box"></div>Timber Structures in ground contact</div>
+      <div class="check-item" onclick="toggleCheck(this,'conducive','Enclosed patios, verandas & floor areas')"><div class="check-box"></div>Enclosed patios/verandas/floor areas</div>
+      <div class="check-item" onclick="toggleCheck(this,'conducive','Patios & porch etc attached to building')"><div class="check-box"></div>Patios/porch attached to building</div>
+      <div class="check-item" onclick="toggleCheck(this,'conducive','External ground level above internal floor level')"><div class="check-box"></div>External ground above internal floor</div>
+      <div class="check-item" onclick="toggleCheck(this,'conducive','Trees &/or stumps on site')"><div class="check-box"></div>Trees &/or stumps on site</div>
+      <div class="check-item" onclick="toggleCheck(this,'conducive','Timber – ground contact bridging to wall')"><div class="check-box"></div>Timber ground contact bridging to wall</div>
+    </div>
+    <input class="field-input" id="conduciveOther" placeholder="Other conducive area / notes..." style="margin-top:8px">
+  </div>
+
+  <div class="section">
+    <div class="section-title">2.14 Vegetation Within 5m</div>
+    <div class="check-group" id="vegetation">
+      <div class="check-item" onclick="toggleCheck(this,'vegetation','Remove dead wood, stumps and tree roots greater than 50mm diameter')"><div class="check-box"></div>Remove dead wood/stumps/roots &gt;50mm</div>
+      <div class="check-item" onclick="toggleCheck(this,'vegetation','Remove susceptible trees that can grow 10m+ high')"><div class="check-box"></div>Remove susceptible trees 10m+</div>
+      <div class="check-item" onclick="toggleCheck(this,'vegetation','Not applicable, no vegetation within 5m')"><div class="check-box"></div>Not applicable</div>
+    </div>
+    <input class="field-input" id="vegetationOther" placeholder="Other..." style="margin-top:8px">
+  </div>
+
+  <div class="section">
+    <div class="section-title">2.15 Overall Risk Level</div>
+    <div class="radio-group" id="riskLevel">
+      <div class="radio-item" onclick="selectRadio('riskLevel',this,'Extremely High')"><div class="radio-dot"></div>Extremely High</div>
+      <div class="radio-item" onclick="selectRadio('riskLevel',this,'High')"><div class="radio-dot"></div>High</div>
+      <div class="radio-item" onclick="selectRadio('riskLevel',this,'Moderate to High')"><div class="radio-dot"></div>Moderate to High</div>
+      <div class="radio-item" onclick="selectRadio('riskLevel',this,'Moderate')"><div class="radio-dot"></div>Moderate</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">3.0 Environmental Conditions</div>
+    <div class="field">
+      <div class="field-label">3.1 Drainage</div>
+      <div class="radio-group" id="drainage">
+        <div class="radio-item" onclick="selectRadio('drainage',this,'Inadequate')"><div class="radio-dot"></div>Inadequate</div>
+        <div class="radio-item" onclick="selectRadio('drainage',this,'Adequate')"><div class="radio-dot"></div>Adequate</div>
+        <div class="radio-item" onclick="selectRadio('drainage',this,'Not able to access')"><div class="radio-dot"></div>Not able to access</div>
+        <div class="radio-item" onclick="selectRadio('drainage',this,'Not Applicable')"><div class="radio-dot"></div>Not Applicable</div>
+      </div>
+      <div class="field-label" style="margin-top:10px">Signs of poor drainage</div>
+      <div class="check-group" id="drainageSigns">
+        <div class="check-item" onclick="toggleCheck(this,'drainageSigns','N/A none found')"><div class="check-box"></div>N/A none found</div>
+        <div class="check-item" onclick="toggleCheck(this,'drainageSigns','dampness in the soil')"><div class="check-box"></div>Dampness in soil</div>
+        <div class="check-item" onclick="toggleCheck(this,'drainageSigns','signs of ponding in the subfloor')"><div class="check-box"></div>Ponding in subfloor</div>
+        <div class="check-item" onclick="toggleCheck(this,'drainageSigns','damp/wet areas against the perimeter')"><div class="check-box"></div>Damp/wet areas at perimeter</div>
+        <div class="check-item" onclick="toggleCheck(this,'drainageSigns','decay/dampness in scrap timbers on ground in the subfloor')"><div class="check-box"></div>Decay/dampness in subfloor timbers</div>
+        <div class="check-item" onclick="toggleCheck(this,'drainageSigns','signs of moisture in foundation masonry')"><div class="check-box"></div>Moisture in foundation masonry</div>
+      </div>
+    </div>
+    <div class="field">
+      <div class="field-label">3.2 Water Leaks</div>
+      <div class="radio-group" id="waterLeaks">
+        <div class="radio-item" onclick="selectRadio('waterLeaks',this,'Present'); toggleConditional('waterLeaksDetails',true)"><div class="radio-dot"></div>Present</div>
+        <div class="radio-item" onclick="selectRadio('waterLeaks',this,'Not Present'); toggleConditional('waterLeaksDetails',false)"><div class="radio-dot"></div>Not Present</div>
+        <div class="radio-item" onclick="selectRadio('waterLeaks',this,'Not able to comment')"><div class="radio-dot"></div>Not able to comment</div>
+      </div>
+      <div class="conditional" id="waterLeaksDetails">
+        <div class="field"><div class="field-label">Areas to be attended to by plumber</div><textarea class="field-input" id="waterLeaksLocation"></textarea></div>
+      </div>
+    </div>
+    <div class="field">
+      <div class="field-label">3.3 Water Discharged Against Building</div>
+      <div class="check-group" id="waterDischarge">
+        <div class="check-item" onclick="toggleCheck(this,'waterDischarge','Hot Water System (HWS)')"><div class="check-box"></div>Hot Water System (HWS)</div>
+        <div class="check-item" onclick="toggleCheck(this,'waterDischarge','HWS and A/C')"><div class="check-box"></div>HWS and A/C</div>
+        <div class="check-item" onclick="toggleCheck(this,'waterDischarge','Air-Conditioning (A/C) condensate')"><div class="check-box"></div>A/C condensate</div>
+        <div class="check-item" onclick="toggleCheck(this,'waterDischarge','Leaking Taps')"><div class="check-box"></div>Leaking Taps</div>
+        <div class="check-item" onclick="toggleCheck(this,'waterDischarge','Taps, HSW & A/C')"><div class="check-box"></div>Taps, HSW & A/C</div>
+        <div class="check-item" onclick="toggleCheck(this,'waterDischarge','Taps & A/C')"><div class="check-box"></div>Taps & A/C</div>
+        <div class="check-item" onclick="toggleCheck(this,'waterDischarge','Taps & HWS')"><div class="check-box"></div>Taps & HWS</div>
+        <div class="check-item" onclick="toggleCheck(this,'waterDischarge','No leaks Found')"><div class="check-box"></div>No leaks Found</div>
+      </div>
+      <input class="field-input" id="waterDischargeType" placeholder="Type of leak found..." style="margin-top:8px">
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 6: Final -->
+<div class="page-content" id="page-5">
+  <div class="section">
+    <div class="section-title">3.4 Ventilation</div>
+    <div class="radio-group" id="ventilation">
+      <div class="radio-item" onclick="selectRadio('ventilation',this,'Inadequate')"><div class="radio-dot"></div>Inadequate</div>
+      <div class="radio-item" onclick="selectRadio('ventilation',this,'Adequate')"><div class="radio-dot"></div>Adequate</div>
+      <div class="radio-item" onclick="selectRadio('ventilation',this,'Not Applicable')"><div class="radio-dot"></div>Not Applicable</div>
+      <div class="radio-item" onclick="selectRadio('ventilation',this,'Not able to access')"><div class="radio-dot"></div>Not able to access</div>
+    </div>
+    <input class="field-input" id="ventilationComment" placeholder="Access reason / comments..." style="margin-top:8px">
+    <div class="field" style="margin-top:10px">
+      <div class="field-label">Ventilation improvement proposal attached?</div>
+      <div class="radio-group" id="ventProposal">
+        <div class="radio-item" onclick="selectRadio('ventProposal',this,'Yes')"><div class="radio-dot"></div>Yes</div>
+        <div class="radio-item" onclick="selectRadio('ventProposal',this,'No')"><div class="radio-dot"></div>No</div>
+        <div class="radio-item" onclick="selectRadio('ventProposal',this,'Not applicable')"><div class="radio-dot"></div>Not applicable</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">3.5 – 3.7 Slab, Weep Holes & General</div>
+    <div class="field">
+      <div class="field-label">3.5 Slab edge inspection zone fully complies?</div>
+      <div class="radio-group" id="slabComplies">
+        <div class="radio-item" onclick="selectRadio('slabComplies',this,'Yes')"><div class="radio-dot"></div>Yes</div>
+        <div class="radio-item" onclick="selectRadio('slabComplies',this,'No')"><div class="radio-dot"></div>No</div>
+        <div class="radio-item" onclick="selectRadio('slabComplies',this,'Not required as it is an Infill Slab')"><div class="radio-dot"></div>Not required (Infill Slab)</div>
+        <div class="radio-item" onclick="selectRadio('slabComplies',this,'Not able to comment')"><div class="radio-dot"></div>Not able to comment</div>
+      </div>
+      <input class="field-input" id="slabComment" placeholder="Arrange exposure / comment..." style="margin-top:8px">
+    </div>
+    <div class="field">
+      <div class="field-label">3.6 Weep holes clear for free flow of air?</div>
+      <div class="radio-group" id="weepHoles">
+        <div class="radio-item" onclick="selectRadio('weepHoles',this,'Yes')"><div class="radio-dot"></div>Yes</div>
+        <div class="radio-item" onclick="selectRadio('weepHoles',this,'No')"><div class="radio-dot"></div>No</div>
+        <div class="radio-item" onclick="selectRadio('weepHoles',this,'Not applicable')"><div class="radio-dot"></div>Not applicable</div>
+        <div class="radio-item" onclick="selectRadio('weepHoles',this,'Not able to comment')"><div class="radio-dot"></div>Not able to comment</div>
+      </div>
+      <input class="field-input" id="weepHolesComment" placeholder="Comments..." style="margin-top:8px">
+    </div>
+    <div class="field">
+      <div class="field-label">3.7 Environmental / General Information</div>
+      <textarea class="field-input" id="generalInfo" placeholder="General observations, conditions, notes..." style="min-height:80px"></textarea>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">4.0 Future Inspections</div>
+    <div class="radio-group" id="futureInspection">
+      <div class="radio-item" onclick="selectRadio('futureInspection',this,'1 Month')"><div class="radio-dot"></div>1 Month</div>
+      <div class="radio-item" onclick="selectRadio('futureInspection',this,'2 Months')"><div class="radio-dot"></div>2 Months</div>
+      <div class="radio-item" onclick="selectRadio('futureInspection',this,'3 Months')"><div class="radio-dot"></div>3 Months</div>
+      <div class="radio-item" onclick="selectRadio('futureInspection',this,'6 Months')"><div class="radio-dot"></div>6 Months</div>
+      <div class="radio-item" onclick="selectRadio('futureInspection',this,'12 Months')"><div class="radio-dot"></div>12 Months</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Additional Information & Sign Off</div>
+    <div class="field"><div class="field-label">Additional Information</div><textarea class="field-input" id="additionalInfo" style="min-height:80px" placeholder="Any additional notes or mud map description..."></textarea></div>
+    <div class="field"><div class="field-label">Inspector Name</div><input class="field-input" id="inspectorName" placeholder="Full name"></div>
+    <div class="field"><div class="field-label">Insurance Accreditation Number</div><input class="field-input" id="accreditationNum"></div>
+    <div class="field"><div class="field-label">Report Date</div><input class="field-input" id="reportDate" type="date"></div>
+  </div>
+
+  <div style="padding: 8px 0 16px;">
+    <button class="nav-btn success" style="width:100%;padding:18px;font-size:16px;border-radius:14px" onclick="generatePDF()">
+      📄 Generate PDF Report
+    </button>
+  </div>
+</div>
+
+<!-- Bottom Nav -->
+<div class="bottom-nav">
+  <button class="nav-btn secondary" id="prevBtn" onclick="changePage(-1)" style="display:none">← Back</button>
+  <button class="nav-btn primary" id="nextBtn" onclick="changePage(1)">Next →</button>
+</div>
+
+<script>
+let currentPage = 0;
+const totalPages = 6;
+const radioValues = {};
+const checkValues = {};
+
+// ── NAVIGATION ─────────────────────────────────────────────
+function goToPage(n) {
+  document.querySelectorAll('.page-content').forEach((p,i) => p.classList.toggle('active', i === n));
+  document.querySelectorAll('.page-tab').forEach((t,i) => t.classList.toggle('active', i === n));
+  document.getElementById('progressFill').style.width = ((n+1)/totalPages*100) + '%';
+  document.getElementById('prevBtn').style.display = n === 0 ? 'none' : 'block';
+  document.getElementById('nextBtn').textContent = n === totalPages-1 ? '✓ Done' : 'Next →';
+  document.getElementById('nextBtn').className = n === totalPages-1 ? 'nav-btn success' : 'nav-btn primary';
+  currentPage = n;
+  window.scrollTo(0,0);
+}
+
+function changePage(dir) {
+  const next = currentPage + dir;
+  if (next >= 0 && next < totalPages) goToPage(next);
+}
+
+// ── RADIO & CHECKBOX ───────────────────────────────────────
+function selectRadio(groupId, el, value) {
+  document.querySelectorAll('#' + groupId + ' .radio-item').forEach(r => r.classList.remove('selected'));
+  el.classList.add('selected');
+  radioValues[groupId] = value;
+  saveData();
+}
+
+function toggleCheck(el, groupId, value) {
+  el.classList.toggle('checked');
+  const box = el.querySelector('.check-box');
+  box.textContent = el.classList.contains('checked') ? '✓' : '';
+  if (!checkValues[groupId]) checkValues[groupId] = [];
+  if (el.classList.contains('checked')) {
+    if (!checkValues[groupId].includes(value)) checkValues[groupId].push(value);
+  } else {
+    checkValues[groupId] = checkValues[groupId].filter(v => v !== value);
+  }
+  saveData();
+}
+
+function toggleConditional(id, show) {
+  const el = document.getElementById(id);
+  if (el) el.classList.toggle('show', show);
+}
+
+// ── SAVE / LOAD ────────────────────────────────────────────
+function getAllInputs() {
+  const data = { radio: radioValues, checks: checkValues, fields: {} };
+  document.querySelectorAll('.field-input').forEach(el => { if (el.id) data.fields[el.id] = el.value; });
+  return data;
+}
+
+function saveData() {
+  localStorage.setItem('termite_inspection', JSON.stringify(getAllInputs()));
+  const ind = document.getElementById('saveIndicator');
+  ind.textContent = '✓ Saved';
+  ind.style.color = '#4ade80';
+}
+
+function loadData() {
+  const raw = localStorage.getItem('termite_inspection');
+  if (!raw) return;
+  try {
+    const data = JSON.parse(raw);
+    // Restore fields
+    if (data.fields) {
+      Object.entries(data.fields).forEach(([id, val]) => {
+        const el = document.getElementById(id);
+        if (el) el.value = val;
+      });
+    }
+    // Restore radios
+    if (data.radio) {
+      Object.entries(data.radio).forEach(([groupId, value]) => {
+        radioValues[groupId] = value;
+        document.querySelectorAll('#' + groupId + ' .radio-item').forEach(r => {
+          if (r.textContent.trim().startsWith(value) || r.querySelector('.radio-dot')?.nextSibling?.textContent?.trim() === value) {
+            r.classList.add('selected');
+          }
+        });
+      });
+    }
+    // Restore checks
+    if (data.checks) {
+      Object.entries(data.checks).forEach(([groupId, values]) => {
+        checkValues[groupId] = values;
+        document.querySelectorAll('#' + groupId + ' .check-item').forEach(item => {
+          const label = item.textContent.trim();
+          const matched = values.some(v => label.includes(v.substring(0,15)));
+          if (matched) {
+            item.classList.add('checked');
+            const box = item.querySelector('.check-box');
+            if (box) box.textContent = '✓';
+          }
+        });
+      });
+    }
+  } catch(e) { console.log('Load error', e); }
+}
+
+// Auto-save on any input
+document.querySelectorAll('.field-input').forEach(el => {
+  el.addEventListener('input', saveData);
+});
+
+// ── PDF GENERATION ─────────────────────────────────────────
+function g(id) { const el = document.getElementById(id); return el ? el.value : ''; }
+function r(id) { return radioValues[id] || ''; }
+function c(id) { return (checkValues[id] || []).join(', '); }
+function checked(id) { return (checkValues[id] || []).length > 0; }
+
+function generatePDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const W = 210; const margin = 15; const colW = W - margin*2;
+  let y = 15;
+
+  function checkY(needed=10) {
+    if (y + needed > 280) { doc.addPage(); y = 15; }
+  }
+
+  function header(text) {
+    checkY(12);
+    doc.setFillColor(26,26,26);
+    doc.rect(margin, y, colW, 8, 'F');
+    doc.setTextColor(230,51,41);
+    doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.text(text, margin+3, y+5.5);
+    doc.setTextColor(0,0,0);
+    y += 10;
+  }
+
+  function subHeader(text) {
+    checkY(8);
+    doc.setFontSize(8); doc.setFont('helvetica','bold');
+    doc.setTextColor(80,80,80);
+    doc.text(text, margin, y+4);
+    doc.setTextColor(0,0,0);
+    y += 6;
+  }
+
+  function field(label, value, indent=0) {
+    if (!value) return;
+    checkY(7);
+    doc.setFontSize(7.5); doc.setFont('helvetica','bold');
+    doc.text(label + ':', margin+indent, y);
+    doc.setFont('helvetica','normal');
+    const lines = doc.splitTextToSize(value, colW - 50 - indent);
+    doc.text(lines, margin + indent + 52, y);
+    y += Math.max(5, lines.length * 4.5);
+  }
+
+  function fieldFull(label, value) {
+    if (!value) return;
+    checkY(12);
+    doc.setFontSize(7.5); doc.setFont('helvetica','bold');
+    doc.text(label + ':', margin, y); y += 4.5;
+    doc.setFont('helvetica','normal');
+    const lines = doc.splitTextToSize(value, colW);
+    doc.text(lines, margin, y);
+    y += lines.length * 4.5 + 2;
+  }
+
+  function tick(label, value, checked) {
+    checkY(5);
+    doc.setFontSize(7.5); doc.setFont('helvetica','normal');
+    doc.rect(margin, y-3, 3.5, 3.5);
+    if (checked) { doc.setFont('helvetica','bold'); doc.setTextColor(230,51,41); doc.text('✓', margin+0.5, y); doc.setTextColor(0,0,0); doc.setFont('helvetica','normal'); }
+    doc.text(label, margin+5, y);
+    y += 5;
+  }
+
+  function divider() { checkY(3); doc.setDrawColor(220,220,220); doc.line(margin, y, W-margin, y); y += 3; }
+
+  // ── TITLE ──
+  doc.setFillColor(26,26,26);
+  doc.rect(0,0,210,22,'F');
+  doc.setTextColor(230,51,41);
+  doc.setFontSize(13); doc.setFont('helvetica','bold');
+  doc.text('EVICT-A-PEST', margin, 10);
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(9);
+  doc.text('Regular Visual Termite Inspection Report AS 3660.2:2017 — CheckSheet', margin, 16);
+  doc.setTextColor(0,0,0); y = 28;
+
+  // ── PAGE 1 ──
+  header('CLIENT INFORMATION');
+  field('Client Name', g('clientName'));
+  field('Client Address', g('clientAddress'));
+  field('State', g('clientState')); field('Postcode', g('clientPostcode'));
+  field('Phone', g('clientPhone')); field('Mobile', g('clientMobile'));
+  field('Email', g('clientEmail'));
+  if (g('structureAt')) field('Structure At', g('structureAt'));
+  divider();
+  field('Date of Inspection', g('inspDate'));
+  field('Start Time', g('startTime')); field('Finish Time', g('finishTime'));
+  field('Weather', r('weather'));
+  if (g('weatherComments')) fieldFull('Weather Comments', g('weatherComments'));
+
+  header('1.0 BUILDING DESCRIPTION');
+  field('Type', c('buildingType') + (g('buildingTypeOther') ? ' / ' + g('buildingTypeOther') : ''));
+  field('Height', r('buildingHeight') + (g('buildingHeightOther') ? ' — ' + g('buildingHeightOther') : ''));
+  field('Built From', c('builtFrom') + (g('builtFromOther') ? ' / ' + g('builtFromOther') : ''));
+  field('Pier Type', c('pierType') + (g('pierTypeOther') ? ' / ' + g('pierTypeOther') : ''));
+  field('Flooring', c('flooring') + (g('flooringOther') ? ' / ' + g('flooringOther') : ''));
+  field('Roofing', c('roofing') + (g('roofingOther') ? ' / ' + g('roofingOther') : ''));
+  field('Fences', c('fences') + (g('fencesOther') ? ' / ' + g('fencesOther') : ''));
+
+  // ── PAGE 2 ──
+  header('1.1 AREAS INSPECTED');
+  fieldFull('Inspected', c('areasInspected') + (g('areasInspectedOther') ? ', ' + g('areasInspectedOther') : ''));
+
+  header('1.2 AREAS NOT INSPECTED (No Reasonable Access)');
+  ['interior','slab','slabCovered','roofVoid','subfloor','wallExt','garage','carport','outBuildings','trees','fences','garden','retaining','other'].forEach(k => {
+    const labels = {interior:'Interior',slab:'Edge of concrete slab',slabCovered:'Slab edge covered by',roofVoid:'Roof Void',subfloor:'Subfloor',wallExt:'Wall Exterior',garage:'Garage',carport:'Carport',outBuildings:'Out Buildings',trees:'Trees/Stumps/Posts',fences:'Fences',garden:'Garden & Landscaping',retaining:'Timber Retaining Walls',other:'Other'};
+    field(labels[k], g('ni_'+k));
+  });
+
+  header('1.3 AREAS OBSTRUCTED OR RESTRICTED');
+  ['interior','roofVoid','subfloor','wallExt','garage','carport','outBuildings','trees','fences','garden','retaining','other'].forEach(k => {
+    const labels = {interior:'Interior',roofVoid:'Roof Void',subfloor:'Subfloor',wallExt:'Wall Exterior',garage:'Garage',carport:'Carport',outBuildings:'Out Buildings',trees:'Trees/Stumps/Posts',fences:'Fences',garden:'Garden & Landscaping',retaining:'Timber Retaining Walls',other:'Other'};
+    field(labels[k], g('ob_'+k));
+  });
+
+  header('1.4 HIGH RISK AREAS');
+  ['interior','slab','weepHoles','roofVoid','subfloor','extWalls','garage','carport','outBuildings','fences','retaining','other'].forEach(k => {
+    const labels = {interior:'Interior',slab:'Edge of concrete slab',weepHoles:'Weep holes',roofVoid:'Roof Void',subfloor:'Subfloor',extWalls:'Exterior walls',garage:'Garage',carport:'Carport',outBuildings:'Out Buildings',fences:'Fences',retaining:'Retaining walls',other:'Other'};
+    field(labels[k], g('hr_'+k));
+  });
+
+  field('Insulation in roof void', r('insulation') + (g('insulationDetails') ? ' — ' + g('insulationDetails') : ''));
+  field('Property furnished', r('furnished'));
+
+  // ── PAGE 3 ──
+  header('2.1 ACTIVE TERMITES');
+  field('Live insects found', r('activeTermites'));
+  if (c('activeLocations')) field('Located in', c('activeLocations'));
+  field('Species believed to be', r('termiteSpecies'));
+  if (r('termitePotential')) field('Potential to cause', r('termitePotential'));
+
+  header('2.2 TERMITE NEST');
+  field('Nest found', r('nestFound'));
+  if (g('nestDescription')) fieldFull('Description & location', g('nestDescription'));
+
+  header('2.3 – 2.7 EVIDENCE & DAMAGE');
+  field('2.3 Subterranean workings evidence', r('subWorking'));
+  field('2.4 Visible damage evidence', r('damageFound'));
+  if (g('damageLocation')) field('2.5 Damage/workings mainly in', g('damageLocation'));
+  field('2.6 Damage appears to be', r('damageLevel'));
+  field('2.7 Moisture readings', r('moistureReading'));
+  if (g('moistureDetails')) field('Moisture details/location', g('moistureDetails'));
+  field('Moisture meter', r('moistureMeter') || g('moistureMeterOther'));
+
+  // ── PAGE 4 ──
+  header('2.8 PREVIOUS TREATMENT EVIDENCE');
+  fieldFull('Evidence found', c('prevTreatment'));
+
+  header('2.9 DURABLE SIGN');
+  field('Durable sign', r('durableSign'));
+  if (g('durableSignLocation')) field('Found in', g('durableSignLocation'));
+  if (c('durableSignType')) fieldFull('Indicates', c('durableSignType'));
+  if (g('lifeExpectancy')) field('Life expectancy (years)', g('lifeExpectancy'));
+  if (r('systemMaintained')) field('System maintained', r('systemMaintained'));
+
+  header('2.10 TREATMENT RECOMMENDATION');
+  field('Recommendation', r('treatmentRec'));
+  if (c('treatmentReason')) fieldFull('Reason', c('treatmentReason'));
+  if (g('treatmentComment')) fieldFull('Comment', g('treatmentComment'));
+  if (c('treatmentProposal')) field('Treatment proposal', c('treatmentProposal'));
+
+  header('2.11 – 2.12 SHIELDS & WOOD DECAY');
+  field('2.11 Termite shields', r('termiteShields'));
+  if (g('termiteShieldsComment')) field('Shields comment', g('termiteShieldsComment'));
+  field('2.12 Wood decay fungi found', r('woodDecay'));
+  if (g('woodDecayLocation')) fieldFull('Evidence found in', g('woodDecayLocation'));
+
+  // ── PAGE 5 ──
+  header('2.13 CONDITIONS CONDUCIVE TO TERMITES');
+  fieldFull('Conditions identified', c('conducive') + (g('conduciveOther') ? ', ' + g('conduciveOther') : ''));
+
+  header('2.14 VEGETATION WITHIN 5M');
+  fieldFull('Action required', c('vegetation') + (g('vegetationOther') ? ', ' + g('vegetationOther') : ''));
+
+  header('2.15 OVERALL RISK LEVEL');
+  field('Risk level', r('riskLevel'));
+
+  header('3.0 ENVIRONMENTAL CONDITIONS');
+  field('3.1 Drainage', r('drainage'));
+  if (c('drainageSigns')) fieldFull('Signs of poor drainage', c('drainageSigns'));
+  field('3.2 Water leaks', r('waterLeaks'));
+  if (g('waterLeaksLocation')) fieldFull('Plumber areas', g('waterLeaksLocation'));
+  field('3.3 Water discharged', c('waterDischarge'));
+  if (g('waterDischargeType')) field('Leak type', g('waterDischargeType'));
+
+  // ── PAGE 6 ──
+  header('3.4 – 3.7 VENTILATION, SLAB & GENERAL');
+  field('3.4 Ventilation', r('ventilation'));
+  if (g('ventilationComment')) field('Ventilation comment', g('ventilationComment'));
+  field('Ventilation proposal', r('ventProposal'));
+  field('3.5 Slab edge complies', r('slabComplies'));
+  if (g('slabComment')) field('Slab comment', g('slabComment'));
+  field('3.6 Weep holes clear', r('weepHoles'));
+  if (g('weepHolesComment')) field('Weep holes comment', g('weepHolesComment'));
+  if (g('generalInfo')) fieldFull('3.7 General conditions', g('generalInfo'));
+
+  header('4.0 FUTURE INSPECTIONS & SIGN OFF');
+  field('Next inspection due', r('futureInspection'));
+  if (g('additionalInfo')) fieldFull('Additional information', g('additionalInfo'));
+  divider();
+  field('Inspector', g('inspectorName'));
+  field('Accreditation No.', g('accreditationNum'));
+  field('Date', g('reportDate'));
+
+  // Footer on all pages
+  const pageCount = doc.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFontSize(7); doc.setTextColor(150,150,150);
+    doc.text('Evict-A-Pest · AS 3660.2:2017 · CheckSheet Only — DO NOT ISSUE TO CLIENT', margin, 290);
+    doc.text('Page ' + i + ' of ' + pageCount, W-margin-15, 290);
+  }
+
+  const clientName = g('clientName').replace(/\s+/g,'_') || 'Inspection';
+  const date = g('inspDate') || new Date().toISOString().slice(0,10);
+  doc.save('Termite_Inspection_' + clientName + '_' + date + '.pdf');
+  showToast('PDF saved!');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// Load saved data on start
+window.addEventListener('load', () => {
+  loadData();
+  // Set today's date as default
+  const today = new Date().toISOString().slice(0,10);
+  if (!document.getElementById('inspDate').value) document.getElementById('inspDate').value = today;
+  if (!document.getElementById('reportDate').value) document.getElementById('reportDate').value = today;
+});
+</script>
+</body>
+</html>
